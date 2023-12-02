@@ -9,6 +9,7 @@ from src.auth.models import *
 from src.config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
 from src.database import Base
 from src.employee.models import *
+from src.task.models import *
 from src.operations.models import *
 from src.chat.models import *
 
