@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -13,10 +14,10 @@ from src.operations.router import router as router_operation
 from src.report.router import router as router_report
 from src.pages.router import router as router_pages
 from src.chat.router import router as router_chat
+from src.employee.router import router as router_employee
 
-app = FastAPI(
-    title="Task_tracker App"
-)
+
+app = FastAPI(title="Task_tracker App")
 
 favicon_path = './src/static/favicon.ico'
 
@@ -38,6 +39,7 @@ app.include_router(router_operation)
 app.include_router(router_report)
 app.include_router(router_pages)
 app.include_router(router_chat)
+app.include_router(router_employee)
 
 origins = [
     "http://localhost:8000",
