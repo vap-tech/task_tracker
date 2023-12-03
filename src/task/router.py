@@ -1,17 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi_cache.decorator import cache
-from sqlalchemy import insert, select, update, delete, desc
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
 from src.task.models import Task
-from src.task.schemas import TaskCreate
-from src.employee.router import get_id
+from src.task.schemas import TaskCreate, TaskUpdate
+from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
 
 router = APIRouter(
     prefix="/task",
     tags=["Task"]
 )
+
+
+@router.post("")
+async def add_task(new_task: TaskCreate, session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Добавляет новую задачу в БД.\n
+    id: no required, auto set\n
+    name: required\n
+    status: required
+    """
+
+    response = await post_obj(
+        Task.__table__,
+        new_task,
+        session=session
+    )
+
+    return response
 
 
 @router.get("/")
@@ -22,110 +41,65 @@ async def get_task(
         search: str = '',
         session: AsyncSession = Depends(get_async_session),
 ):
-    skip = (page - 1) * limit
-    try:
-        query = select(Task.__table__).filter(
-            Task.__table__.c.full_name.contains(search)).limit(limit).offset(skip)
-        result = await session.execute(query)
-        result = result.all()
 
-        result = [TaskCreate.model_validate(i, from_attributes=True) for i in result]
+    """Получает список задач с пагинацией."""
 
-        return {
-            "status": "success",
-            "data": result,
-            "details": None
-        }
-    except Exception:
-        # Передать ошибку разработчикам
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={
-            "status": "error",
-            "data": None,
-            "details": None
-        })
+    response = await get_obj(
+        Task.__table__,
+        Task.__table__.c.name,
+        TaskCreate,
+        limit=limit,
+        page=page,
+        search=search,
+        session=session
+    )
 
-
-@router.post("")
-async def add_task(new_task: TaskCreate, session: AsyncSession = Depends(get_async_session)):
-
-    id_ = await get_id(Task, session=session)
-    new_task.id = id_
-    stmt = insert(Task).values(**new_task.model_dump())
-    await session.execute(stmt)
-    await session.commit()
-    return {
-        "status": "success",
-        "data": None,
-        "details": None
-    }
-
-
-@router.patch('/{task_id}')
-async def update_task(task_id: int, payload: TaskCreate, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Task.__table__).filter(Task.__table__.c.id == task_id)
-    result = await session.execute(stmt)
-    task = result.first()
-
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f'Задача id: {task_id} не найдена')
-
-    update_data = payload.model_dump(exclude_unset=True)
-    stmt = update(Task.__table__).filter(Task.__table__.c.id == task_id).values(**update_data)
-    await session.execute(stmt)
-    await session.commit()
-
-    return {
-        "status": "success",
-        "data": None,
-        "details": None
-    }
+    return response
 
 
 @router.get('/{task_id}')
+@cache(expire=10)
 async def get_task(task_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Task.__table__).filter(Task.__table__.c.id == task_id)
-    result = await session.execute(stmt)
-    task = result.first()
 
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Задача id: {task_id} не найдена")
+    """Получает задачу по id."""
 
-    task = [TaskCreate.model_validate(row, from_attributes=True) for row in task]
+    response = await get_obj_by_id(
+        task_id,
+        Task.__table__,
+        TaskCreate,
+        session=session)
 
-    return {
-        "status": "success",
-        "data": task,
-        "details": None
-    }
+    return response
+
+
+@router.patch('/')
+async def update_task(obj: TaskUpdate, session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Обновляет объект в БД.
+    \n
+    id: required
+    """
+
+    response = await patch_obj(
+        Task.__table__,
+        TaskUpdate,
+        obj,
+        session=session
+    )
+
+    return response
 
 
 @router.delete('/{task_id}')
 async def delete_task(task_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Task.__table__).filter(Task.__table__.c.id == task_id)
-    result = await session.execute(stmt)
-    task = result.first()
 
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Задача id: {task_id} не найдена")
+    """Удаляет задачу из БД по полученному id."""
 
-    try:
-        stmt = delete(Task.__table__).filter(Task.__table__.c.id == task_id)
-        await session.execute(stmt)
-        await session.commit()
+    response = await delete_obj(
+        task_id,
+        Task.__table__,
+        session=session
+    )
 
-        return {
-            "status": "success",
-            "data": None,
-            "details": None
-        }
-
-    except Exception:
-        # Передать ошибку разработчикам
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={
-            "status": "error",
-            "data": None,
-            "details": None
-        })
+    return response
