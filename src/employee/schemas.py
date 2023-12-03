@@ -1,12 +1,20 @@
-from datetime import datetime
-
-from pydantic import BaseModel
+from src.task.schemas import ObjBase, NaiveDatetime
 
 
-class EmployeeCreate(BaseModel):
-    id: int
+class EmployeeBase(ObjBase):
+    telegram: str = None
+
+    date_end: NaiveDatetime = None
+
+
+class EmployeeCreate(EmployeeBase):
+    id: int = None
     full_name: str
     position: str
-    telegram: str
-    date_begin: datetime
-    date_end: datetime
+    date_begin: NaiveDatetime
+
+
+class EmployeeUpdate(EmployeeBase):
+    full_name: str = None
+    position: str = None
+    date_begin: NaiveDatetime = None

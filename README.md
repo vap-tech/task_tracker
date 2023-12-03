@@ -53,8 +53,8 @@
 + В файле .env изменить доступы к базам данных и redis
 + alembic upgrade head
 + uvicorn src.main:app --reload
-+ celery --app=src.tasks.tasks:celery worker -l INFO
-+ celery --app=src.tasks.tasks:celery flower
++ celery --app=src.report.report:celery worker -l INFO
++ celery --app=src.report.report:celery flower
 
 ## Запуск docker:
 + docker compose build

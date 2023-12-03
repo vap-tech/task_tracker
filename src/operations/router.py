@@ -9,7 +9,7 @@ from src.database import get_async_session
 from src.operations.models import Operation
 from src.operations.schemas import OperationCreate
 
-from src.employee.router import get_id
+from src.function.for_router import get_free_id
 
 router = APIRouter(
     prefix="/operations",
@@ -53,7 +53,7 @@ async def get_specific_operations(
 @router.post("")
 async def add_specific_operations(new_operation: OperationCreate, session: AsyncSession = Depends(get_async_session)):
 
-    id_ = await get_id(Operation, session=session)
+    id_ = await get_free_id(Operation.__table__, session=session)
     new_operation.id = id_
     stmt = insert(Operation).values(**new_operation.model_dump())
     await session.execute(stmt)

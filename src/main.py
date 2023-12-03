@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -15,6 +14,7 @@ from src.report.router import router as router_report
 from src.pages.router import router as router_pages
 from src.chat.router import router as router_chat
 from src.employee.router import router as router_employee
+from src.task.router import router as router_task
 
 
 app = FastAPI(title="Task_tracker App")
@@ -40,8 +40,10 @@ app.include_router(router_report)
 app.include_router(router_pages)
 app.include_router(router_chat)
 app.include_router(router_employee)
+app.include_router(router_task)
 
 origins = [
+    "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://v-petrenko.ru",
     "https://vap-tech.ru",

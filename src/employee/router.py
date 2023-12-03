@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi_cache.decorator import cache
-from sqlalchemy import insert, select, update, delete, desc
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
 from src.employee.models import Employee
-from src.employee.schemas import EmployeeCreate
+from src.employee.schemas import EmployeeCreate, EmployeeUpdate
+from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
 
 router = APIRouter(
     prefix="/employee",
@@ -13,23 +14,24 @@ router = APIRouter(
 )
 
 
-async def get_id(model, session: AsyncSession = Depends(get_async_session)):
-    """
-    Получает следующий свободный id
-    :param model: Класс модели алхимии
-    :param session: Сессия
-    :return: Свободный id
-    """
-    query = select(model.__table__).order_by(desc(model.__table__.c.id)).limit(1)
-    result = await session.execute(query)
-    result = result.all()
+@router.post("")
+async def add_employee(new_employee: EmployeeCreate, session: AsyncSession = Depends(get_async_session)):
 
-    if result:
-        id_ = result[0].id + 1
-    else:
-        id_ = 0
+    """
+    Добавляет нового сотрудника в БД.\n
+    id: no required, auto set\n
+    full_name: required\n
+    position: required\n
+    date_begin: required
+    """
 
-    return id_
+    response = await post_obj(
+        Employee.__table__,
+        new_employee,
+        session=session
+    )
+
+    return response
 
 
 @router.get("/")
@@ -40,110 +42,65 @@ async def get_employees(
         search: str = '',
         session: AsyncSession = Depends(get_async_session),
 ):
-    skip = (page - 1) * limit
-    try:
-        query = select(Employee.__table__).filter(
-            Employee.__table__.c.full_name.contains(search)).limit(limit).offset(skip)
-        result = await session.execute(query)
-        result = result.all()
 
-        result = [EmployeeCreate.model_validate(i, from_attributes=True) for i in result]
+    """Получает список сотрудников с пагинацией."""
 
-        return {
-            "status": "success",
-            "data": result,
-            "details": None
-        }
-    except Exception:
-        # Передать ошибку разработчикам
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={
-            "status": "error",
-            "data": None,
-            "details": None
-        })
+    response = await get_obj(
+        Employee.__table__,
+        Employee.__table__.c.full_name,
+        EmployeeCreate,
+        limit=limit,
+        page=page,
+        search=search,
+        session=session
+    )
 
-
-@router.post("")
-async def add_employee(new_employee: EmployeeCreate, session: AsyncSession = Depends(get_async_session)):
-
-    id_ = await get_id(Employee, session=session)
-    new_employee.id = id_
-    stmt = insert(Employee).values(**new_employee.model_dump())
-    await session.execute(stmt)
-    await session.commit()
-    return {
-        "status": "success",
-        "data": None,
-        "details": None
-    }
-
-
-@router.patch('/{employee_id}')
-async def update_employee(employee_id: int, payload: EmployeeCreate, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Employee.__table__).filter(Employee.__table__.c.id == employee_id)
-    result = await session.execute(stmt)
-    employee = result.first()
-
-    if not employee:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f'Сотрудник id: {employee_id} не найден')
-
-    update_data = payload.model_dump(exclude_unset=True)
-    stmt = update(Employee.__table__).filter(Employee.__table__.c.id == employee_id).values(**update_data)
-    await session.execute(stmt)
-    await session.commit()
-
-    return {
-        "status": "success",
-        "data": None,
-        "details": None
-    }
+    return response
 
 
 @router.get('/{employee_id}')
+@cache(expire=10)
 async def get_employee(employee_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Employee.__table__).filter(Employee.__table__.c.id == employee_id)
-    result = await session.execute(stmt)
-    employee = result.first()
 
-    if not employee:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Сотрудник id: {employee_id} не найден")
+    """Получает сотрудника по id."""
 
-    employee = [EmployeeCreate.model_validate(row, from_attributes=True) for row in employee]
+    response = await get_obj_by_id(
+        employee_id,
+        Employee.__table__,
+        EmployeeCreate,
+        session=session
+    )
 
-    return {
-        "status": "success",
-        "data": employee,
-        "details": None
-    }
+    return response
+
+
+@router.patch('/')
+async def update_employee(obj: EmployeeUpdate, session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Обновляет объект в БД.
+    \n
+    id: required
+    """
+
+    response = await patch_obj(
+        Employee.__table__,
+        EmployeeUpdate,
+        obj,
+        session=session
+    )
+
+    return response
 
 
 @router.delete('/{employee_id}')
 async def delete_employee(employee_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = select(Employee.__table__).filter(Employee.__table__.c.id == employee_id)
-    result = await session.execute(stmt)
-    employee = result.first()
+    """Удаляет сотрудника из БД по полученному id."""
 
-    if not employee:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Сотрудник id: {employee_id} не найден")
+    response = await delete_obj(
+        employee_id,
+        Employee.__table__,
+        session=session
+    )
 
-    try:
-        query = delete(Employee.__table__).filter(Employee.__table__.c.id == employee_id)
-        await session.execute(query)
-        await session.commit()
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": None
-        }
-
-    except Exception:
-        # Передать ошибку разработчикам
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={
-            "status": "error",
-            "data": None,
-            "details": None
-        })
+    return response

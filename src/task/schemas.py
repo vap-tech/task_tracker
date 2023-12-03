@@ -1,15 +1,25 @@
-from datetime import datetime
-
-from pydantic import BaseModel
+from pydantic import BaseModel, NaiveDatetime
 
 
-class TaskCreate(BaseModel):
-    """Задача"""
-
+class ObjBase(BaseModel):
     id: int
+
+
+class TaskBase(ObjBase):
+    """Задача"""
+    parent_task_id: int = None
+    employee_id: int = None
+    date_begin: NaiveDatetime = None
+    date_end: NaiveDatetime = None
+
+
+class TaskCreate(TaskBase):
+    """Задача"""
+    id: int = None
     name: str
-    parent_task_id: int
-    employee_id: int
-    date_begin: datetime
-    date_end: datetime
     status: str
+
+
+class TaskUpdate(TaskBase):
+    name: str = None
+    status: str = None
