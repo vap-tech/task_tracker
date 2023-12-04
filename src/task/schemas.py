@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, NaiveDatetime
 
 
@@ -23,3 +25,12 @@ class TaskCreate(TaskBase):
 class TaskUpdate(TaskBase):
     name: str = None
     status: str = None
+
+
+class TaskGet(ObjBase):
+    name: str
+    parent_task_id: Any
+    employee_id: Any
+    date_begin: Any
+    date_end: Any
+    status: str

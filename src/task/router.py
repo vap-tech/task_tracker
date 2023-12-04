@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 from src.task.models import Task
 from src.task.schemas import TaskCreate, TaskUpdate, TaskGet
-from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
+from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_important_tasks
 
 router = APIRouter(
     prefix="/task",
@@ -99,6 +99,25 @@ async def delete_task(task_id: int, session: AsyncSession = Depends(get_async_se
     response = await delete_obj(
         task_id,
         Task.__table__,
+        session=session
+    )
+
+    return response
+
+
+@router.get('/important_tasks/')
+async def important_tasks(
+        task: str = '',
+        session: AsyncSession = Depends(get_async_session)):
+    """
+    Получает из БД задачи не взятые в работу, от которых
+    зависят другие задачи, взятые в работу.\n
+    Максимально можно получить 999 задач.\n
+    В случае ошибки по превышению, пожалуйста, используйте критерии поиска.
+    """
+
+    response = await get_important_tasks(
+        task,
         session=session
     )
 

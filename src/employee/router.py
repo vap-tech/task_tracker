@@ -107,13 +107,22 @@ async def delete_employee(employee_id: int, session: AsyncSession = Depends(get_
 
 
 @router.get('/employee_with_tasks/')
-async def employee_with_tasks(session: AsyncSession = Depends(get_async_session)):
+async def employee_with_tasks(
+        full_name: str = '',
+        task: str = '',
+        session: AsyncSession = Depends(get_async_session)):
 
     """
     Получает из БД список сотрудников и их задачи,
-    отсортированный по количеству активных задач.
+    отсортированный по количеству активных задач.\n
+    Максимальное произведение количества сотрудников на количество задач равно 999.\n
+    В случае ошибки по превышению, пожалуйста, используйте критерии поиска.
     """
 
-    response = await get_employee_with_tasks(session=session)
+    response = await get_employee_with_tasks(
+        full_name,
+        task,
+        session=session
+    )
 
     return response
