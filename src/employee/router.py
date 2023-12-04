@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
 from src.employee.models import Employee
-from src.employee.schemas import EmployeeCreate, EmployeeUpdate
-from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
+from src.employee.schemas import EmployeeCreate, EmployeeUpdate, EmployeeGet
+from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_employee_with_tasks
 
 router = APIRouter(
     prefix="/employee",
@@ -48,7 +48,7 @@ async def get_employees(
     response = await get_obj(
         Employee.__table__,
         Employee.__table__.c.full_name,
-        EmployeeCreate,
+        EmployeeGet,
         limit=limit,
         page=page,
         search=search,
@@ -67,7 +67,7 @@ async def get_employee(employee_id: int, session: AsyncSession = Depends(get_asy
     response = await get_obj_by_id(
         employee_id,
         Employee.__table__,
-        EmployeeCreate,
+        EmployeeGet,
         session=session
     )
 
@@ -102,5 +102,18 @@ async def delete_employee(employee_id: int, session: AsyncSession = Depends(get_
         Employee.__table__,
         session=session
     )
+
+    return response
+
+
+@router.get('/employee_with_tasks/')
+async def employee_with_tasks(session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Получает из БД список сотрудников и их задачи,
+    отсортированный по количеству активных задач.
+    """
+
+    response = await get_employee_with_tasks(session=session)
 
     return response

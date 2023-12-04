@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
 from src.task.models import Task
-from src.task.schemas import TaskCreate, TaskUpdate
+from src.task.schemas import TaskCreate, TaskUpdate, TaskGet
 from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
 
 router = APIRouter(
@@ -47,7 +47,7 @@ async def get_task(
     response = await get_obj(
         Task.__table__,
         Task.__table__.c.name,
-        TaskCreate,
+        TaskGet,
         limit=limit,
         page=page,
         search=search,
@@ -66,7 +66,7 @@ async def get_task(task_id: int, session: AsyncSession = Depends(get_async_sessi
     response = await get_obj_by_id(
         task_id,
         Task.__table__,
-        TaskCreate,
+        TaskGet,
         session=session)
 
     return response
