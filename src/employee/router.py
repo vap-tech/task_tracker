@@ -4,10 +4,10 @@ from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
-from src.employee.models import Employee
-from src.employee.schemas import EmployeeCreate, EmployeeUpdate, EmployeeGet
-from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_employee_with_tasks, \
-    get_free_employee
+from .models import Employee
+from .schemas import EmployeeCreate, EmployeeUpdate, EmployeeGet
+from .functions import get_employee_with_tasks, get_free_employee, assign_task_to_emp
+from src.function.crud_object import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
 
 router = APIRouter(
     prefix="/employee",
@@ -20,8 +20,8 @@ async def add_employee(new_employee: EmployeeCreate, session: AsyncSession = Dep
 
     """
     Добавляет нового сотрудника в БД.\n
-    id: no required, auto set\n
-    task_count: no required, auto set\n
+    id: required, auto set\n
+    task_count: required, auto set\n
     full_name: required\n
     position: required\n
     date_begin: required
@@ -82,8 +82,7 @@ async def get_employee(employee_id: int, session: AsyncSession = Depends(get_asy
 async def update_employee(obj: EmployeeUpdate, session: AsyncSession = Depends(get_async_session)):
 
     """
-    Обновляет объект в БД.
-    \n
+    Обновляет сотрудника в БД.\n
     id: required
     """
 
@@ -99,11 +98,32 @@ async def update_employee(obj: EmployeeUpdate, session: AsyncSession = Depends(g
 
 @router.delete('/{employee_id}')
 async def delete_employee(employee_id: int, session: AsyncSession = Depends(get_async_session)):
+
     """Удаляет сотрудника из БД по полученному id."""
 
     response = await delete_obj(
         employee_id,
         Employee.__table__,
+        session=session
+    )
+
+    return response
+
+
+@router.post('/assign_task/')
+async def assign_task_to_employee(
+        task_id: int,
+        emp_id: int,
+        emp_tc: int = 0,
+        session: AsyncSession = Depends(get_async_session)
+):
+
+    """Присваивает задачу сотруднику"""
+
+    response = await assign_task_to_emp(
+        task_id,
+        emp_id,
+        emp_tc,
         session=session
     )
 

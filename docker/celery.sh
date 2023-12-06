@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd src || { echo "Отсутствует каталог src"; exit 1; }
+#cd fastapi_app || { echo "Отсутствует каталог fastapi_app"; exit 1; }
 
 if [[ "${1}" == "celery" ]]; then
   celery --app=src.report.report:celery worker

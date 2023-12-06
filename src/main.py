@@ -6,22 +6,22 @@ from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
 from fastapi.responses import FileResponse
 
-from src.auth.base_config import auth_backend, fastapi_users
-from src.auth.schemas import UserCreate, UserRead
-from src.config import REDIS_HOST, REDIS_PORT
-from src.operations.router import router as router_operation
-from src.report.router import router as router_report
-from src.pages.router import router as router_pages
-from src.chat.router import router as router_chat
-from src.employee.router import router as router_employee
-from src.task.router import router as router_task
+from .auth.base_config import auth_backend, fastapi_users
+from .auth.schemas import UserCreate, UserRead
+from .config import REDIS_HOST, REDIS_PORT, STATIC
+from .operations.router import router as router_operation
+from .report.router import router as router_report
+from .pages.router import router as router_pages
+from .chat.router import router as router_chat
+from .employee.router import router as router_employee
+from .task.router import router as router_task
 
 
 app = FastAPI(title="Task_tracker App")
 
-favicon_path = './src/static/favicon.ico'
+favicon_path = STATIC + 'favicon.ico'
 
-app.mount("/static", StaticFiles(directory="./src/static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
@@ -45,6 +45,7 @@ app.include_router(router_task)
 origins = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "fastapi_app",
     "https://v-petrenko.ru",
     "https://vap-tech.ru",
 ]

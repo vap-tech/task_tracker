@@ -7,7 +7,7 @@ services:
     expose:
       - 1221
     env_file:
-      - .env-non-dev
+      - .env-non-dev.sample
 
   redis:
     image: redis:7
@@ -20,11 +20,11 @@ services:
     build:
       context: .
     env_file:
-      - .env-non-dev
+      - .env-non-dev.sample
     container_name: fastapi_app
-    command: ["/fastapi_app/docker/app.sh"]
+    command: ["./docker/app.sh"]
     ports:
-      - "9999:8000"
+      - "8000:8000"
     depends_on:
       - db
       - redis
@@ -33,9 +33,9 @@ services:
     build:
       context: .
     env_file:
-      - .env-non-dev
+      - .env-non-dev.sample
     container_name: celery_app
-    command: ["/fastapi_app/docker/celery.sh", "celery"]
+    command: ["./docker/celery.sh", "celery"]
     depends_on:
       - redis
 
@@ -43,9 +43,9 @@ services:
     build:
       context: .
     env_file:
-      - .env-non-dev
+      - .env-non-dev.sample
     container_name: flower_app
-    command: ["/fastapi_app/docker/celery.sh", "flower"]
+    command: ["./docker/celery.sh", "flower"]
     depends_on:
       - redis
       - celery

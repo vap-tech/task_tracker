@@ -3,10 +3,11 @@ from fastapi_cache.decorator import cache
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_async_session
-from src.task.models import Task
-from src.task.schemas import TaskCreate, TaskUpdate, TaskGet
-from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_important_tasks
+from ..database import get_async_session
+from ..task.models import Task
+from ..task.schemas import TaskCreate, TaskUpdate, TaskGet
+from ..function.crud_object import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj
+from .functions import get_important_tasks, get_important_tasks_and_emp
 
 router = APIRouter(
     prefix="/task",
@@ -117,6 +118,23 @@ async def important_tasks(
     """
 
     response = await get_important_tasks(
+        task,
+        session=session
+    )
+
+    return response
+
+
+@router.get('/important_tasks_and_employee/')
+async def get_important_tasks_and_employee(
+        task: str = '',
+        session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Возвращает Список объектов [{Важная задача, Срок, [ФИО сотрудника]}]
+    """
+
+    response = await get_important_tasks_and_emp(
         task,
         session=session
     )
