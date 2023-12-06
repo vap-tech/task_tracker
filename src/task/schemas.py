@@ -34,3 +34,7 @@ class TaskGet(ObjBase):
     date_begin: Any
     date_end: Any
     status: str
+
+
+class TaskGetMinimal(ObjBase):
+    name: str
