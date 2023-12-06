@@ -2,7 +2,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_cache.decorator import cache
-from sqlalchemy import insert, select, desc
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_session
@@ -66,4 +66,3 @@ async def main(session: AsyncSession = Depends(get_async_session)):
     result = await session.execute(select(Operation.__table__))
     result = [OperationCreate.model_validate(row, from_attributes=True) for row in result.all()]
     return result
-

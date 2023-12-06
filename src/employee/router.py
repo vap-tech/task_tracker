@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 from src.employee.models import Employee
 from src.employee.schemas import EmployeeCreate, EmployeeUpdate, EmployeeGet
-from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_employee_with_tasks
+from src.function.for_router import get_obj, get_obj_by_id, post_obj, patch_obj, delete_obj, get_employee_with_tasks, \
+    get_free_employee
 
 router = APIRouter(
     prefix="/employee",
@@ -20,10 +21,13 @@ async def add_employee(new_employee: EmployeeCreate, session: AsyncSession = Dep
     """
     Добавляет нового сотрудника в БД.\n
     id: no required, auto set\n
+    task_count: no required, auto set\n
     full_name: required\n
     position: required\n
     date_begin: required
     """
+
+    new_employee.task_count = 0
 
     response = await post_obj(
         Employee.__table__,
@@ -122,6 +126,23 @@ async def employee_with_tasks(
     response = await get_employee_with_tasks(
         full_name,
         task,
+        session=session
+    )
+
+    return response
+
+
+@router.get('/free_employee/')
+async def free_employee(task_id: int, session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Ищет сотрудника, который может взять важную задачу.\n
+    Это будет наименее загруженный сотрудник или сотрудник выполняющий родительскую задачу\n
+    если ему назначено максимум на 2 задачи больше, чем у наименее загруженного сотрудника.
+    """
+
+    response = await get_free_employee(
+        task_id,
         session=session
     )
 

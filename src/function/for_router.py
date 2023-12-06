@@ -8,7 +8,7 @@ from src.config import DEBUG
 from src.task.models import Task
 from src.employee.models import Employee
 from src.employee.schemas import EmployeeCreate
-from src.task.schemas import TaskCreate, ObjBase
+from src.task.schemas import TaskCreate, ObjBase, TaskGetMinimal
 
 
 async def get_free_id(
@@ -341,18 +341,175 @@ async def get_important_tasks(task: str, session: AsyncSession = Depends(get_asy
             "details": "Важные задачи отсутствуют."
         }
 
-    result = []
-
-    for i in data:
-        result.append(
-            {
-                'id': i[0],
-                'name': i[1]
-            }
-        )
+    result = [TaskGetMinimal.model_validate(
+        row,
+        from_attributes=True) for row in data]
 
     return {
         "status": "success",
         "data": result,
         "details": None
+    }
+
+
+async def assign_task_to_employee(
+        task_id: int,
+        emp_id: int,
+        emp_tc: int = None,
+        session: AsyncSession = Depends(get_async_session)):
+
+    """Присваивает задачу сотруднику"""
+
+    stmt = update(
+        Task.__table__
+    ).where(
+        Task.__table__.c.id == task_id
+    ).values(employee_id=emp_id)
+
+    await session.execute(stmt)
+
+    # Если task_count не передавался
+    if not emp_tc:
+        stmt = select(
+            Employee.__table__.c.id,
+            Employee.__table__.c.task_count
+        ).where(
+            Employee.__table__.c.id == emp_id
+        )
+        _, emp_tc = (await session.execute(stmt)).first()
+
+    stmt = update(
+        Employee.__table__
+    ).where(
+        Employee.__table__.c.id == emp_id
+    ).values(task_count=emp_tc)
+
+    await session.execute(stmt)
+    await session.commit()
+
+
+async def get_free_employee(task_id: int, session: AsyncSession = Depends(get_async_session)):
+
+    """
+    Ищет сотрудника, который может взять важную задачу.
+    Это будет наименее загруженный сотрудник или сотрудник выполняющий родительскую задачу
+    если ему назначено максимум на 2 задачи больше, чем у наименее загруженного сотрудника.
+    """
+
+    # Получаем наименее загруженного сотрудника
+    stmt = select(
+        Employee.__table__.c.id,
+        Employee.__table__.c.full_name,
+        Employee.__table__.c.task_count
+    ).order_by(
+        Employee.__table__.c.task_count
+    )
+
+    emp_min_id, emp_min_name, emp_min_tc = (await session.execute(stmt)).first()
+
+    # Получаем id родительской задачи
+    stmt = select(
+        Task.__table__.c.parent_task_id
+    ).where(
+        Task.__table__.c.id == task_id
+    )
+
+    result = (await session.execute(stmt)).first()
+    prnt_task_id: int = result[0]
+
+    # Если отсутствует родительская задача
+    if not prnt_task_id:
+
+        # Присваиваем наименее занятому
+        await assign_task_to_employee(
+            task_id,
+            emp_min_id,
+            emp_min_tc,
+            session
+        )
+
+        return {
+            "status": "success",
+            "data": {
+                "id": emp_min_id,
+                "full_name": emp_min_name
+            },
+            "details": "отсутствует родительская задача"
+        }
+
+    # Получаем id сотрудника родительской задачи
+    stmt = select(
+        Task.__table__.c.employee_id
+    ).where(
+        Task.__table__.c.id == prnt_task_id
+    )
+
+    result = (await session.execute(stmt)).first()
+    prnt_emp_id: int = result[0]
+
+    # Если родительская задача не назначена
+    if not prnt_emp_id:
+
+        # Присваиваем наименее занятому
+        await assign_task_to_employee(
+            task_id,
+            emp_min_id,
+            emp_min_tc,
+            session
+        )
+
+        return {
+            "status": "success",
+            "data": {
+                "id": emp_min_id,
+                "full_name": emp_min_name
+            },
+            "details": "родительская задача не назначена"
+        }
+
+    # Получаем количество задач сотрудника родительской задачи
+    stmt = select(
+        Employee.__table__.c.full_name,
+        Employee.__table__.c.task_count,
+    ).where(
+        Employee.__table__.c.id == prnt_emp_id
+    )
+
+    prnt_emp_fn, prnt_emp_tc = (await session.execute(stmt)).first()
+
+    # Если у родителя больше как минимум на 2
+    if prnt_emp_tc - emp_min_tc > 2:
+
+        # Присваиваем наименее занятому
+        await assign_task_to_employee(
+            task_id,
+            emp_min_id,
+            emp_min_tc,
+            session
+        )
+
+        return {
+            "status": "success",
+            "data": {
+                "id": emp_min_id,
+                "full_name": emp_min_name
+            },
+            "details": "у исполнителя родительской задачи больше как минимум на 2"
+        }
+
+    # Присваиваем сотруднику, выполняющему родительскую задачу
+    await assign_task_to_employee(
+        task_id,
+        prnt_emp_id,
+        prnt_emp_tc,
+        session
+    )
+
+    return {
+        "status": "success",
+        "data": {
+                "id": prnt_emp_id,
+                "full_name": prnt_emp_fn
+            },
+        "details": "присвоено исполнителю родительской задачи"
     }
