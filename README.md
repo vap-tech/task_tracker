@@ -71,6 +71,7 @@
 + celery --app=src.report.report:celery flower
 
 ## Запуск docker:
++ Из файла pyproject.toml удалить pytest-asyncio = "^0.23.0", тесты в прод не планировались.
 + Переименовать .env-non-dev.sample в .env-non-dev
 + В файле .env-non-dev внести необходимые изменения
 + docker compose build
