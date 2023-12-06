@@ -48,6 +48,9 @@
 ## Сгенерировать миграции:
 +  alembic revision --autogenerate -m 'initial'
 
+## Тестирование локально:
++ pytest -s -v
+
 ## Запуск локально:
 + Переименовать .env.sample в .env
 + В файле .env изменить доступы к базам данных и redis
@@ -57,5 +60,11 @@
 + celery --app=src.report.report:celery flower
 
 ## Запуск docker:
++ Переименовать .env-non-dev.sample в .env-non-dev
++ В файле .env-non-dev внести необходимые изменения
 + docker compose build
 + docker compose up
+
+## bugs:
++ При запуске нескольких воркеров чат на вебсокете работает тоже на нескольких воркерах, 
+из-за чего не все клиенты друг другу могут достучаться
