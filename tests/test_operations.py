@@ -13,6 +13,7 @@ async def test_add_specific_operations(ac: AsyncClient):
 
     assert response.status_code == 200
 
+
 async def test_get_specific_operations(ac: AsyncClient):
     response = await ac.get("/operations", params={
         "operation_type": "Выплата купонов",
