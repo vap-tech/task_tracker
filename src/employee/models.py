@@ -9,6 +9,7 @@ class Employee(Base):
 
     id = Column(Integer, primary_key=True)
     full_name = Column(String)
+    task_count = Column(Integer)
     position = Column(String)
     telegram = Column(String)
     date_begin = Column(TIMESTAMP)
